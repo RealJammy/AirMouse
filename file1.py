@@ -10,15 +10,19 @@ HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
-model_path = r"c:\Users\emily\AppData\Local\python\pythoncore-3.14-64\hand_landmarker.task"
+cam = cv2.VideoCapture(0)
 
-cam = cv2.VideoCapture(1)
+if cam.isOpened():
+        print("Camera is ready")
 
-while cam.isOpened():
+cv2.waitKey()
+model_path = "hand_landmarker.task"
+
+while True:
     ret, frame = cam.read()
-    frame_width = int(cam.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    cv2.imshow("Camera", frame)
-
+    if ret:
+        cv2.imshow("Our image", frame)
+        cv2.waitKey(1)
+        
 
 print("hi")

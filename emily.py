@@ -22,7 +22,7 @@ def find_avg_coords(landmarks):
 
 def mp_to_screen_coords(mp_coords):
     screen_width, screen_height = pyautogui.size()
-    x = int(mp_coords[0] * screen_width)
+    x = screen_width - int(mp_coords[0] * screen_width) # Account for direction being flipped
     y = int(mp_coords[1] * screen_height)
     return (x, y)
 
@@ -39,7 +39,7 @@ def parse_data(result):
     #print(result.hand_landmarks[0]) # This is an array of data for the first hand detected. For each element of the array, you get x,y, and z data.
     avg_x, avg_y, avg_z = find_avg_coords(result.hand_landmarks[0])
     screen_coords = mp_to_screen_coords((avg_x, avg_y))
-    print(f"Average screen coordinates: x={screen_coords[0]}, y={screen_coords[1]}")
+    print(screen_coords)
     move_mouse(screen_coords[0], screen_coords[1])
 
 
@@ -60,11 +60,9 @@ with HandLandmarker.create_from_options(options) as landmarker:
     while cam.isOpened():
         ret, frame = cam.read()
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-        frame_width = int(cam.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cv2.imshow("Camera", frame)
         landmarker.detect_async(mp_image, int(time.time() * 1000))
-        cv2.waitKey(1)
+        cv2.waitKey(100)
         # Remove me later once we're finished testing :)
         
 cv2.destroyAllWindows()

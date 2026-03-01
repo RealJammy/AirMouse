@@ -14,16 +14,30 @@ HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
+co_ordinates_history = [] # This is going to be a crime against computers.
+
 def find_avg_coords(landmarks):
     avg_x = sum([landmark.x for landmark in landmarks]) / len(landmarks)
     avg_y = sum([landmark.y for landmark in landmarks]) / len(landmarks)
     avg_z = sum([landmark.z for landmark in landmarks]) / len(landmarks)
     return avg_x, avg_y, avg_z
 
+def avg_averages(averages):
+    avg_x = sum([avg[0] for avg in averages]) / len(averages)
+    avg_y = sum([avg[1] for avg in averages]) / len(averages)
+    avg_z = sum([avg[2] for avg in averages]) / len(averages)
+    return avg_x, avg_y, avg_z
+
 def mp_to_screen_coords(mp_coords):
+    # implement proper scaling
     screen_width, screen_height = pyautogui.size()
-    x = screen_width - int(mp_coords[0] * screen_width) # Account for direction being flipped
-    y = int(mp_coords[1] * screen_height)
+    raw_x = screen_width - int(mp_coords[0] * screen_width) # Account for direction being flipped
+    raw_y = int(mp_coords[1] * screen_height)
+    scaled_x = int((1.28 * raw_x) - 384) # These numbers are just here to make it work for this camera. You could calibrate. We're not.
+    scaled_y = int((1.28 * raw_y) - 384)
+    # Remember to add sanity checks for the edges of the screen
+    x = max(10, min(screen_width, scaled_x))
+    y = max(10, min(screen_height, scaled_y))
     return (x, y)
 
 def screen_to_mp_coords(screen_coords):
@@ -40,6 +54,7 @@ def parse_data(result):
     avg_x, avg_y, avg_z = find_avg_coords(result.hand_landmarks[0])
     screen_coords = mp_to_screen_coords((avg_x, avg_y))
     print(screen_coords)
+    co_ordinates_history.append(screen_coords)        
     move_mouse(screen_coords[0], screen_coords[1])
 
 

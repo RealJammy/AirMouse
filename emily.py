@@ -1,4 +1,5 @@
 import mediapipe as mp
+import numpy as np
 import cv2
 import time
 import pyautogui
@@ -14,7 +15,7 @@ HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
-co_ordinates_history = [] # This is going to be a crime against computers.
+
 
 def find_avg_coords(landmarks):
     avg_x = sum([landmark.x for landmark in landmarks]) / len(landmarks)
@@ -29,7 +30,7 @@ def avg_averages(averages):
     return avg_x, avg_y, avg_z
 
 def mp_to_screen_coords(mp_coords):
-    # implement proper scaling
+    # implement proper scaling lol lmao
     screen_width, screen_height = pyautogui.size()
     raw_x = screen_width - int(mp_coords[0] * screen_width) # Account for direction being flipped
     raw_y = int(mp_coords[1] * screen_height)
@@ -46,6 +47,16 @@ def screen_to_mp_coords(screen_coords):
     y = screen_coords[1] / screen_height
     return (x, y)
 
+def check_click(co_ordinates_history):
+    # Simple click detection: if all coordinates are within a small range, it's a click
+    x_values = sorted([coord[0] for coord in co_ordinates_history])
+    y_values = sorted([coord[1] for coord in co_ordinates_history])
+    if (x_values[14] - x_values[4]) < 10 and (y_values[14] - y_values[4]) < 10:
+        pyautogui.click()
+        return True
+    return False
+    
+
 def move_mouse(x, y):
     pyautogui.moveTo(x, y)
 
@@ -53,8 +64,14 @@ def parse_data(result):
     #print(result.hand_landmarks[0]) # This is an array of data for the first hand detected. For each element of the array, you get x,y, and z data.
     avg_x, avg_y, avg_z = find_avg_coords(result.hand_landmarks[0])
     screen_coords = mp_to_screen_coords((avg_x, avg_y))
-    print(screen_coords)
-    co_ordinates_history.append(screen_coords)        
+    co_ordinates_history.append(screen_coords)
+    # Co_ordinate history is a list of 20 tuples.
+    if len(co_ordinates_history) == 20:
+        co_ordinates_history.pop(0)
+        click_choice = check_click(co_ordinates_history)
+        if click_choice:
+            print("Click detected!")
+            co_ordinates_history.clear() # Clear the history after a click to prevent multiple clicks from one gesture 
     move_mouse(screen_coords[0], screen_coords[1])
 
 
@@ -72,8 +89,12 @@ options = HandLandmarkerOptions(
     result_callback=print_result)
 
 with HandLandmarker.create_from_options(options) as landmarker:
+    count = 0
+    co_ordinates_history = [] # This is going to be a crime against computers.
     while cam.isOpened():
+        count += 1
         ret, frame = cam.read()
+        print(count)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
         cv2.imshow("Camera", frame)
         landmarker.detect_async(mp_image, int(time.time() * 1000))

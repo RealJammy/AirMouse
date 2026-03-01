@@ -6,16 +6,15 @@ import pyautogui
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-model_path = r"C:\Users\thisi\Downloads\Kek\GitHub\hack-sussex-2026\tasks\hand_landmarker.task"
+
+model_path = r"C:\Users\thisi\Downloads\Kek\GitHub\hack-sussex-2026\tasks\gesture_recognizer.task"
 cam = cv2.VideoCapture(0)
 
 BaseOptions = mp.tasks.BaseOptions
-HandLandmarker = mp.tasks.vision.HandLandmarker
-HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
-HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
-
-
 
 def find_avg_coords(landmarks):
     avg_x = sum([landmark.x for landmark in landmarks]) / len(landmarks)
@@ -62,6 +61,7 @@ def check_line(co_ordinates_history):
     if abs((x_values[-1] - x_values[0])) < 50 and abs((y_values[0] - y_values[-1])) > 150:
         print("Line detected!")
         if (y_values[0] - y_values[-1]) > 0:
+            # Make scroll based on change in line value
             pyautogui.scroll(1000)
         else:
             pyautogui.scroll(-1000)
@@ -77,45 +77,51 @@ def parse_data(result):
     avg_x, avg_y, avg_z = find_avg_coords(result.hand_landmarks[0])
     screen_coords = mp_to_screen_coords((avg_x, avg_y))
     co_ordinates_history.append(screen_coords)
+    shape_cache.append(screen_coords)
     # Co_ordinate history is a list of 20 tuples.
     if len(co_ordinates_history) == 20:
         co_ordinates_history.pop(0)
         click_choice = check_click(co_ordinates_history)
         if click_choice:
             print("Click detected!")
-            co_ordinates_history.clear() # Clear the history after a click to prevent multiple clicks from one gesture 
-        if not click_choice: # Only check for a line if we didn't detect a click, to prevent conflicts
-            line_choice = check_line(co_ordinates_history)
-            if line_choice:
-                print("Line detected!")
-                co_ordinates_history.clear()
+            co_ordinates_history.clear() # Clear the history after a click to prevent multiple clicks from one gesture
+    if len(shape_cache) == 24 and not click_choice: # Only check for a line if we didn't detect a click, to prevent conflicts
+        shape_cache.pop(0)
+        line_choice = check_line(shape_cache)
+        if line_choice:
+            # NOTE - WE NEED TO ADD IN SOME SORT OF CHECK TO PREVENT IT NOT TRACKING THE UPWARDS MOVE
+            print("Line detected!")
+            shape_cache.clear()
+
     move_mouse(screen_coords[0], screen_coords[1])
 
 
 def print_result(result, output_image, timestamp):
+    print(result)
     if len(result.hand_landmarks) > 0:
         parse_data(result)
     else:
-        print("No hand landmarks detected.")
+        print("No gesture landmarks detected.")
     #print('hand landmarker result: {}'.format(result))
 
 
-options = HandLandmarkerOptions(
+options = GestureRecognizerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
     running_mode=VisionRunningMode.LIVE_STREAM,
     min_hand_presence_confidence=0.3,
     result_callback=print_result)
 
-with HandLandmarker.create_from_options(options) as landmarker:
+with GestureRecognizer.create_from_options(options) as recognizer:
     count = 0
     co_ordinates_history = [] # This is going to be a crime against computers.
+    shape_cache = []
     while cam.isOpened():
         count += 1
         ret, frame = cam.read()
         print(count)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
         cv2.imshow("Camera", frame)
-        landmarker.detect_async(mp_image, int(time.time() * 1000))
+        recognizer.recognize_async(mp_image, int(time.time() * 1000))
         cv2.waitKey(100)
         # Remove me later once we're finished testing :)
         

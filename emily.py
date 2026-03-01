@@ -51,7 +51,7 @@ def check_click(co_ordinates_history):
     # Simple click detection: if all coordinates are within a small range, it's a click
     x_values = sorted([coord[0] for coord in co_ordinates_history])
     y_values = sorted([coord[1] for coord in co_ordinates_history])
-    if (x_values[14] - x_values[4]) < 10 and (y_values[14] - y_values[4]) < 10:
+    if (x_values[14] - x_values[4]) < 20 and (y_values[14] - y_values[4]) < 20:
         pyautogui.click()
         return True
     return False
@@ -86,6 +86,7 @@ def print_result(result, output_image, timestamp):
 options = HandLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
     running_mode=VisionRunningMode.LIVE_STREAM,
+    min_hand_presence_confidence=0.3,
     result_callback=print_result)
 
 with HandLandmarker.create_from_options(options) as landmarker:

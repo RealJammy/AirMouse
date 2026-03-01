@@ -86,8 +86,10 @@ def gesture_action(gesture):
         return False
     if gesture == "Victory":
         print("Victory detected!")
+        pyautogui.click(button="middle")
         return True
     if gesture == "Thumb_Up":
+        pyautogui.typewrite("Hello!")
         print("Thumbs up detected!")
         return True
     if gesture == "Thumb_Down":

@@ -7,7 +7,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 
-model_path = r"C:\Users\thisi\Downloads\Kek\GitHub\hack-sussex-2026\tasks\gesture_recognizer.task"
+model_path = "tasks/gesture_recognizer.task"
 cam = cv2.VideoCapture(0)
 
 BaseOptions = mp.tasks.BaseOptions
@@ -29,13 +29,11 @@ def avg_averages(averages):
     return avg_x, avg_y, avg_z
 
 def mp_to_screen_coords(mp_coords):
-    # implement proper scaling lol lmao
     screen_width, screen_height = pyautogui.size()
     raw_x = screen_width - int(mp_coords[0] * screen_width) # Account for direction being flipped
     raw_y = int(mp_coords[1] * screen_height)
-    scaled_x = int((1.28 * raw_x) - 384) # These numbers are just here to make it work for this camera. You could calibrate. We're not.
+    scaled_x = int((1.28 * raw_x) - 384) 
     scaled_y = int((1.28 * raw_y) - 384)
-    # Remember to add sanity checks for the edges of the screen
     x = max(10, min(screen_width, scaled_x))
     y = max(10, min(screen_height, scaled_y))
     return (x, y)
@@ -77,7 +75,6 @@ def move_mouse(x, y):
     pyautogui.moveTo(x, y)
 
 def gesture_action(gesture):
-    # NOTE: add some form of gesture averaging once we work this out
     if gesture == "Closed_Fist":
         pyautogui.click(button="right")
         return False
@@ -100,10 +97,9 @@ def gesture_action(gesture):
         return True  # Do not assign this action. It's our default movement state
     if gesture == "None":
         return True
-        # Do not assign this action. It's our default movement state
 
 def parse_data(result):
-    #print(result.hand_landmarks[0]) # This is an array of data for the first hand detected. For each element of the array, you get x,y, and z data.
+# This is an array of data for the first hand detected. For each element of the array, you get x,y, and z data.
     avg_x, avg_y, avg_z = find_avg_coords(result.hand_landmarks[0])
     screen_coords = mp_to_screen_coords((avg_x, avg_y))
     co_ordinates_history.append(screen_coords)
@@ -131,7 +127,6 @@ def parse_data(result):
         shape_cache.pop(0)
         line_choice = check_line(shape_cache)
         if line_choice:
-            # NOTE - WE NEED TO ADD IN SOME SORT OF CHECK TO PREVENT IT NOT TRACKING THE UPWARDS MOVE
             print("Line detected!")
             shape_cache.clear()
 
@@ -144,7 +139,6 @@ def print_result(result, output_image, timestamp):
         gesture = get_gesture_result(result)
     else:
         print("No gesture landmarks detected.")
-    #print('hand landmarker result: {}'.format(result))
 
 
 def get_gesture_result(category1):
@@ -161,7 +155,7 @@ options = GestureRecognizerOptions(
 
 with GestureRecognizer.create_from_options(options) as recognizer:
     count = 0
-    co_ordinates_history = [] # This is going to be a crime against computers.
+    co_ordinates_history = []
     shape_cache = []
     gesture_cache = []
     while cam.isOpened():
@@ -175,7 +169,6 @@ with GestureRecognizer.create_from_options(options) as recognizer:
             for gesture in recognition_result.gestures:
                 category = get_gesture_result(gesture[0][0])
         cv2.waitKey(100)
-        # Remove me later once we're finished testing :)
-        
+
 cv2.destroyAllWindows()
 

@@ -48,6 +48,7 @@ def screen_to_mp_coords(screen_coords):
 
 def check_click(co_ordinates_history):
     # Simple click detection: if all coordinates are within a small range, it's a click
+    print("Checking for click...")
     x_values = sorted([coord[0] for coord in co_ordinates_history])
     y_values = sorted([coord[1] for coord in co_ordinates_history])
     if (x_values[14] - x_values[4]) < 20 and (y_values[14] - y_values[4]) < 20:
@@ -68,9 +69,36 @@ def check_line(co_ordinates_history):
         return True
     return False
 
+def gesture_validation(gestures):
+    return all(gesture == gestures[0] for gesture in gestures)
+
 
 def move_mouse(x, y):
     pyautogui.moveTo(x, y)
+
+def gesture_action(gesture):
+    # NOTE: add some form of gesture averaging once we work this out
+    if gesture == "Closed_Fist":
+        pyautogui.click(button="right")
+        return False
+    if gesture == "Pointing_Up":
+        pyautogui.click()
+        return False
+    if gesture == "Victory":
+        print("Victory detected!")
+        return True
+    if gesture == "Thumb_Up":
+        print("Thumbs up detected!")
+        return True
+    if gesture == "Thumb_Down":
+        print("Thumbs down detected!")
+        return True
+    if gesture == "Open_Palm":
+        print("Open hand detected!")
+        return True  # Do not assign this action. It's our default movement state
+    if gesture == "None":
+        return True
+        # Do not assign this action. It's our default movement state
 
 def parse_data(result):
     #print(result.hand_landmarks[0]) # This is an array of data for the first hand detected. For each element of the array, you get x,y, and z data.
@@ -79,13 +107,25 @@ def parse_data(result):
     co_ordinates_history.append(screen_coords)
     shape_cache.append(screen_coords)
     # Co_ordinate history is a list of 20 tuples.
-    if len(co_ordinates_history) == 20:
+    gesture = get_gesture_result(result)
+    gesture_cache.append(gesture)
+    further_action = True
+    click_choice = False
+    if len(gesture_cache) == 10:
+        if gesture != "None" and gesture_validation(gesture_cache):
+            further_action = gesture_action(gesture) # We check if the user has done an implemented gesture or not.
+        gesture_cache.clear()
+    
+    
+    if len(co_ordinates_history) == 20 and further_action == True:
+        print("hi!!")
         co_ordinates_history.pop(0)
         click_choice = check_click(co_ordinates_history)
         if click_choice:
             print("Click detected!")
             co_ordinates_history.clear() # Clear the history after a click to prevent multiple clicks from one gesture
-    if len(shape_cache) == 24 and not click_choice: # Only check for a line if we didn't detect a click, to prevent conflicts
+            
+    if len(shape_cache) == 24 and not click_choice and further_action == True: # Only check for a line if we didn't detect a click, to prevent conflicts
         shape_cache.pop(0)
         line_choice = check_line(shape_cache)
         if line_choice:
@@ -97,12 +137,18 @@ def parse_data(result):
 
 
 def print_result(result, output_image, timestamp):
-    print(result)
     if len(result.hand_landmarks) > 0:
         parse_data(result)
+        gesture = get_gesture_result(result)
     else:
         print("No gesture landmarks detected.")
     #print('hand landmarker result: {}'.format(result))
+
+
+def get_gesture_result(category1):
+    print(f"Gesture category: {category1.gestures[0][0].category_name}")
+    category2 = category1.gestures[0][0].category_name
+    return category2
 
 
 options = GestureRecognizerOptions(
@@ -115,13 +161,17 @@ with GestureRecognizer.create_from_options(options) as recognizer:
     count = 0
     co_ordinates_history = [] # This is going to be a crime against computers.
     shape_cache = []
+    gesture_cache = []
     while cam.isOpened():
         count += 1
         ret, frame = cam.read()
         print(count)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
         cv2.imshow("Camera", frame)
-        recognizer.recognize_async(mp_image, int(time.time() * 1000))
+        recognition_result = recognizer.recognize_async(mp_image, int(time.time() * 1000))
+        if recognition_result is not None and recognition_result.gestures:
+            for gesture in recognition_result.gestures:
+                category = get_gesture_result(gesture[0][0])
         cv2.waitKey(100)
         # Remove me later once we're finished testing :)
         
